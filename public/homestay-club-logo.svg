@@ -1,0 +1,34 @@
+<svg width="240" height="60" viewBox="0 0 240 60" xmlns="http://www.w3.org/2000/svg" role="img">
+  <title>Homestay Club Logo</title>
+  <desc>Homestay Club - Verified booking platform for homestays and accommodations</desc>
+
+  <defs>
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#059669;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#047857;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Icon -->
+  <g transform="translate(20, 20)">
+    <!-- Roof -->
+    <path d="M -16 0 L 0 -18 L 16 0 Z" fill="url(#tealGrad)" stroke="none"/>
+
+    <!-- House body -->
+    <rect x="-16" y="0" width="32" height="18" fill="url(#tealGrad)" stroke="none"/>
+
+    <!-- Window/door accent -->
+    <rect x="-5.5" y="5.5" width="11" height="12.5" fill="white" stroke="none" opacity="0.15"/>
+
+    <!-- Checkmark circle -->
+    <g transform="translate(12, -4)">
+      <circle cx="0" cy="0" r="8" fill="white"/>
+      <path d="M -2.5 0 L 1.5 3.5 L 4 -1" stroke="#059669" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Text -->
+  <text x="60" y="42" font-family="system-ui, -apple-system, sans-serif" font-size="20" font-weight="500" fill="#059669" letter-spacing="-0.3">
+    Homestay Club
+  </text>
+</svg>
