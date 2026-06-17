@@ -8,7 +8,7 @@ let _transporter: Transporter | null = null;
 async function getTransporter(): Promise<Transporter> {
   if (_transporter) return _transporter;
 
-  if (IS_DEV) {
+  if (IS_DEV && !process.env.EMAIL_HOST) {
     const testAccount = await nodemailer.createTestAccount();
     _transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
@@ -19,7 +19,9 @@ async function getTransporter(): Promise<Transporter> {
     console.log('\n📧 [email/dev] Ethereal test account ready:', testAccount.user);
   } else {
     _transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.EMAIL_HOST,
+      port: Number(process.env.EMAIL_PORT ?? 587),
+      secure: false,
       auth: { user: process.env.EMAIL_FROM, pass: process.env.EMAIL_PASSWORD },
     });
   }
@@ -37,9 +39,8 @@ async function send(options: nodemailer.SendMailOptions): Promise<void> {
   }
 }
 
-const fromAddress = IS_DEV ? '"Discount Club Dev" <dev@example.com>' : undefined;
 function from(domainLabel: string): string {
-  return fromAddress ?? `"${domainLabel}" <${process.env.EMAIL_FROM}>`;
+  return `"${domainLabel}" <${process.env.EMAIL_FROM ?? 'support@assistant.rent'}>`;
 }
 
 const TODD_EMAILS = IS_DEV
