@@ -19,7 +19,7 @@ async function getTransporter(): Promise<Transporter> {
     console.log('\n📧 [email/dev] Ethereal test account ready:', testAccount.user);
   } else {
     _transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST,
+      host: process.env.EMAIL_HOST ?? 'smtp.titan.email',
       port: Number(process.env.EMAIL_PORT ?? 587),
       secure: false,
       auth: { user: process.env.EMAIL_FROM, pass: process.env.EMAIL_PASSWORD },
