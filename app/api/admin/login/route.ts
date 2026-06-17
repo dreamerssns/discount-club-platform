@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    sendVerificationCode(email, code, ADMIN_DOMAIN).catch(console.error);
+    await sendVerificationCode(email, code, ADMIN_DOMAIN);
 
     return NextResponse.json(
       { success: true, message: 'If that email is authorized, a code has been sent.' },

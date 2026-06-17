@@ -41,17 +41,18 @@ export async function POST(req: NextRequest) {
 
     const timestamp = new Date().toISOString();
 
-    // Fire emails without blocking the response
-    Promise.allSettled([
+    const [verifyResult, notifyResult] = await Promise.allSettled([
       sendVerificationCode(email, code, domain),
       sendRegistrationNotification(email, domain, code, timestamp),
-    ]).then(results => {
-      results.forEach((r, i) => {
-        if (r.status === 'rejected') {
-          console.error(`[/api/register] email[${i}] failed:`, r.reason);
-        }
-      });
-    });
+    ]);
+
+    if (verifyResult.status === 'rejected') {
+      console.error('[/api/register] verification email failed:', verifyResult.reason);
+      return NextResponse.json({ success: false, message: 'Failed to send verification email. Please try again.' }, { status: 500 });
+    }
+    if (notifyResult.status === 'rejected') {
+      console.error('[/api/register] notification email failed:', notifyResult.reason);
+    }
 
     return NextResponse.json(
       { success: true, message: 'Verification code sent to your email' },

@@ -83,14 +83,17 @@ export async function POST(req: NextRequest) {
       statusHistory: [],
     });
 
-    // Fire-and-forget email to Todd
-    sendBookingNotification({
-      email, domain, name, phoneNumber, bnbName,
-      checkInDate: fmt(checkIn), checkOutDate: fmt(checkOut),
-      vehicle, priceExpectation, comments,
-      timestamp,
-      bookingId: String(booking._id),
-    }).catch(console.error);
+    try {
+      await sendBookingNotification({
+        email, domain, name, phoneNumber, bnbName,
+        checkInDate: fmt(checkIn), checkOutDate: fmt(checkOut),
+        vehicle, priceExpectation, comments,
+        timestamp,
+        bookingId: String(booking._id),
+      });
+    } catch (emailErr) {
+      console.error('[/api/booking] notification email failed:', emailErr);
+    }
 
     return NextResponse.json({ success: true, message: 'Your submission has been sent' }, { status: 200 });
   } catch (err) {
