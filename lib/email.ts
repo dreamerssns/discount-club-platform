@@ -114,19 +114,63 @@ interface BookingNotificationData {
 }
 
 export async function sendBookingNotification(data: BookingNotificationData) {
-  if (!TODD_EMAILS.length) return;
-
   const {
     email, domain, name, phoneNumber, bnbName,
     checkInDate, checkOutDate, vehicle, priceExpectation, comments,
     timestamp, bookingId,
   } = data;
 
+  const domainLabel = getDomainLabel(domain);
   const optional = (label: string, val?: string) =>
     val ? `- ${label}: ${val}` : `- ${label}: —`;
 
+  // Confirmation to the user
   await send({
-    from: from(getDomainLabel(domain)),
+    from: from(domainLabel),
+    to: email,
+    subject: `Booking Request Received – ${domainLabel}`,
+    text: [
+      `Hi ${name},`,
+      ``,
+      `We've received your booking request. We'll be in touch shortly.`,
+      ``,
+      `Your Request:`,
+      `- BNB Name:   ${bnbName}`,
+      `- Check-in:   ${checkInDate}`,
+      `- Check-out:  ${checkOutDate}`,
+      optional('Vehicle', vehicle),
+      optional('Price Expectation', priceExpectation),
+      optional('Comments', comments),
+      ``,
+      `Reference ID: ${bookingId}`,
+      ``,
+      `Thanks,`,
+      `${domainLabel} Team`,
+    ].join('\n'),
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;">
+        <h2 style="color:#1a1a1a;">Booking Request Received</h2>
+        <p>Hi <strong>${name}</strong>,</p>
+        <p>We've received your booking request and will be in touch shortly.</p>
+        <table style="width:100%;border-collapse:collapse;margin-top:20px;">
+          ${row('BNB Name', bnbName)}
+          ${row('Check-in', checkInDate)}
+          ${row('Check-out', checkOutDate)}
+          ${row('Vehicle', vehicle || '—')}
+          ${row('Price Expectation', priceExpectation || '—')}
+          ${row('Comments', comments || '—')}
+        </table>
+        <p style="color:#9ca3af;font-size:12px;margin-top:24px;">Reference ID: ${bookingId}</p>
+        <p style="margin-top:24px;">Thanks,<br/><strong>${domainLabel} Team</strong></p>
+      </div>
+    `,
+  });
+
+  if (!TODD_EMAILS.length) return;
+
+  // Notification to Todd
+  await send({
+    from: from(domainLabel),
     to: TODD_EMAILS,
     subject: `New Booking - ${domain} - ${name}`,
     text: [
