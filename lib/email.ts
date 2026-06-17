@@ -3,9 +3,6 @@ import { getDomainLabel } from './validation';
 
 const IS_DEV = process.env.NODE_ENV !== 'production';
 
-// In dev: lazily create a free Ethereal test account on first send.
-// Each email logs a preview URL to the terminal — click it to see the
-// fully rendered email in your browser. No SMTP credentials needed.
 let _transporter: Transporter | null = null;
 
 async function getTransporter(): Promise<Transporter> {
@@ -23,20 +20,15 @@ async function getTransporter(): Promise<Transporter> {
   } else {
     _transporter = nodemailer.createTransport({
       service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.EMAIL_PASSWORD,
-      },
+      auth: { user: process.env.EMAIL_FROM, pass: process.env.EMAIL_PASSWORD },
     });
   }
-
   return _transporter;
 }
 
 async function send(options: nodemailer.SendMailOptions): Promise<void> {
   const transport = await getTransporter();
   const info = await transport.sendMail(options);
-
   if (IS_DEV) {
     const url = nodemailer.getTestMessageUrl(info);
     console.log(`\n📬 [email/dev] "${options.subject}"`);
@@ -45,40 +37,29 @@ async function send(options: nodemailer.SendMailOptions): Promise<void> {
   }
 }
 
-const fromAddress = IS_DEV
-  ? '"Discount Club Dev" <dev@example.com>'
-  : undefined; // use domain-aware from in prod
-
+const fromAddress = IS_DEV ? '"Discount Club Dev" <dev@example.com>' : undefined;
 function from(domainLabel: string): string {
   return fromAddress ?? `"${domainLabel}" <${process.env.EMAIL_FROM}>`;
 }
 
 const TODD_EMAILS = IS_DEV
-  ? ['todd-dev@example.com'] // dev: send Todd's emails to Ethereal too
+  ? ['todd-dev@example.com']
   : ([process.env.TODD_EMAIL_1, process.env.TODD_EMAIL_2].filter(Boolean) as string[]);
 
-export async function sendVerificationCode(
-  userEmail: string,
-  code: string,
-  domain: string
-): Promise<void> {
-  const domainLabel = getDomainLabel(domain);
+// ─── User-facing emails ────────────────────────────────────────────────────────
 
+export async function sendVerificationCode(userEmail: string, code: string, domain: string) {
+  const domainLabel = getDomainLabel(domain);
   await send({
     from: from(domainLabel),
     to: userEmail,
     subject: `Your Verification Code – ${domainLabel}`,
     text: [
-      `Hi,`,
-      ``,
-      `Your verification code is: ${code}`,
-      ``,
-      `This code expires in 30 minutes.`,
-      ``,
-      `If you didn't request this, please ignore this email.`,
-      ``,
-      `Best regards,`,
-      `${domainLabel} Team`,
+      `Hi,`, ``,
+      `Your verification code is: ${code}`, ``,
+      `This code expires in 30 minutes.`, ``,
+      `If you didn't request this, please ignore this email.`, ``,
+      `Best regards,`, `${domainLabel} Team`,
     ].join('\n'),
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:32px;">
@@ -97,20 +78,15 @@ export async function sendVerificationCode(
 }
 
 export async function sendRegistrationNotification(
-  userEmail: string,
-  domain: string,
-  code: string,
-  timestamp: string
-): Promise<void> {
+  userEmail: string, domain: string, code: string, timestamp: string
+) {
   if (!TODD_EMAILS.length) return;
-
   await send({
     from: from(getDomainLabel(domain)),
     to: TODD_EMAILS,
     subject: `New Registration – ${domain}`,
     text: [
-      `New registration received:`,
-      ``,
+      `New registration received:`, ``,
       `Email:     ${userEmail}`,
       `Domain:    ${domain}`,
       `Time:      ${timestamp}`,
@@ -119,32 +95,96 @@ export async function sendRegistrationNotification(
   });
 }
 
-export async function sendBookingNotification(
-  userEmail: string,
-  domain: string,
-  timestamp: string,
-  bookingData: Record<string, unknown>
-): Promise<void> {
+// ─── Booking notification (to Todd) ───────────────────────────────────────────
+
+interface BookingNotificationData {
+  email: string;
+  domain: string;
+  name: string;
+  phoneNumber: string;
+  bnbName: string;
+  checkInDate: string;
+  checkOutDate: string;
+  vehicle?: string;
+  priceExpectation?: string;
+  comments?: string;
+  timestamp: string;
+  bookingId: string;
+}
+
+export async function sendBookingNotification(data: BookingNotificationData) {
   if (!TODD_EMAILS.length) return;
 
-  const extraFields = Object.entries(bookingData)
-    .filter(([k]) => k !== 'email' && k !== 'domain')
-    .map(([k, v]) => `${k}: ${v}`)
-    .join('\n');
+  const {
+    email, domain, name, phoneNumber, bnbName,
+    checkInDate, checkOutDate, vehicle, priceExpectation, comments,
+    timestamp, bookingId,
+  } = data;
+
+  const optional = (label: string, val?: string) =>
+    val ? `- ${label}: ${val}` : `- ${label}: —`;
 
   await send({
     from: from(getDomainLabel(domain)),
     to: TODD_EMAILS,
-    subject: `New Booking – ${domain}`,
+    subject: `New Booking - ${domain} - ${name}`,
     text: [
       `New booking submission:`,
       ``,
-      `Email:  ${userEmail}`,
-      `Domain: ${domain}`,
-      `Time:   ${timestamp}`,
-      extraFields ? `\nAdditional details:\n${extraFields}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n'),
+      `User Details:`,
+      `- Name:   ${name}`,
+      `- Email:  ${email}`,
+      `- Phone:  ${phoneNumber}`,
+      `- Domain: ${domain}`,
+      ``,
+      `Booking Details:`,
+      `- BNB Name:   ${bnbName}`,
+      `- Check-in:   ${checkInDate}`,
+      `- Check-out:  ${checkOutDate}`,
+      optional('Vehicle', vehicle),
+      optional('Price Expectation', priceExpectation),
+      optional('Comments', comments),
+      ``,
+      `Submitted: ${timestamp}`,
+      `Status:    Pending`,
+      `ID:        ${bookingId}`,
+    ].join('\n'),
+    html: `
+      <div style="font-family:sans-serif;max-width:560px;margin:auto;padding:32px;">
+        <h2 style="color:#1a1a1a;margin-bottom:4px;">New Booking</h2>
+        <p style="color:#6b7280;font-size:13px;margin-top:0;">${domain} · ${timestamp}</p>
+
+        <table style="width:100%;border-collapse:collapse;margin-top:20px;">
+          <tr><td colspan="2" style="background:#f9fafb;padding:8px 12px;font-weight:600;font-size:13px;color:#374151;">
+            User Details
+          </td></tr>
+          ${row('Name', name)}
+          ${row('Email', email)}
+          ${row('Phone', phoneNumber)}
+          ${row('Domain', domain)}
+
+          <tr><td colspan="2" style="background:#f9fafb;padding:8px 12px;font-weight:600;font-size:13px;color:#374151;border-top:8px solid #fff;">
+            Booking Details
+          </td></tr>
+          ${row('BNB Name', bnbName)}
+          ${row('Check-in', checkInDate)}
+          ${row('Check-out', checkOutDate)}
+          ${row('Vehicle', vehicle || '—')}
+          ${row('Price Expectation', priceExpectation || '—')}
+          ${row('Comments', comments || '—')}
+          ${row('Status', '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:12px;">Pending</span>')}
+        </table>
+
+        <p style="color:#9ca3af;font-size:12px;margin-top:24px;">Booking ID: ${bookingId}</p>
+      </div>
+    `,
   });
+}
+
+function row(label: string, value: string): string {
+  return `
+    <tr>
+      <td style="padding:8px 12px;font-size:13px;color:#6b7280;width:140px;border-bottom:1px solid #f3f4f6;">${label}</td>
+      <td style="padding:8px 12px;font-size:13px;color:#111827;border-bottom:1px solid #f3f4f6;">${value}</td>
+    </tr>`;
 }

@@ -49,3 +49,38 @@ export function verifySessionToken(token: string): SessionPayload | null {
 export function generateNonce(): string {
   return randomBytes(16).toString('hex');
 }
+
+// ─── Admin session (separate cookie, 8-hour TTL) ──────────────────────────────
+
+export function createAdminSessionToken(email: string): string {
+  const expiresAt = Date.now() + 8 * 60 * 60 * 1000; // 8 hours
+  const payload = `${email}|admin|${expiresAt}`;
+  const sig = sign(payload);
+  return Buffer.from(`${payload}|${sig}`).toString('base64url');
+}
+
+export interface AdminSessionPayload {
+  email: string;
+  expiresAt: number;
+}
+
+export function verifyAdminSessionToken(token: string): AdminSessionPayload | null {
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString('utf-8');
+    const parts = decoded.split('|');
+    if (parts.length !== 4) return null;
+
+    const [email, role, expiresAtStr, sig] = parts;
+    if (role !== 'admin') return null;
+
+    const payload = `${email}|${role}|${expiresAtStr}`;
+    if (sign(payload) !== sig) return null;
+
+    const expiresAt = Number(expiresAtStr);
+    if (Date.now() > expiresAt) return null;
+
+    return { email, expiresAt };
+  } catch {
+    return null;
+  }
+}

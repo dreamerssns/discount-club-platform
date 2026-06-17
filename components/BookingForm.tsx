@@ -9,182 +9,291 @@ interface Props {
   onClose: () => void;
 }
 
+interface FormState {
+  name: string;
+  phoneNumber: string;
+  bnbName: string;
+  checkInDate: string;
+  checkOutDate: string;
+  vehicle: string;
+  priceExpectation: string;
+  comments: string;
+}
+
+interface FormErrors {
+  name?: string;
+  phoneNumber?: string;
+  bnbName?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  comments?: string;
+}
+
 const SUBMIT_BTN: Record<string, string> = {
-  'discountbnbclub.com': 'bg-[#0052CC] hover:bg-[#003D99] disabled:bg-blue-300',
-  'homestayclub.ca':     'bg-[#059669] hover:bg-[#047857] disabled:bg-green-300',
+  'discountbnbclub.com': 'bg-[#0052CC] hover:bg-[#003D99] disabled:opacity-50',
+  'homestayclub.ca':     'bg-[#059669] hover:bg-[#047857] disabled:opacity-50',
 };
 
-export default function BookingForm({ email, domain, onSuccess, onClose }: Props) {
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    checkIn: '',
-    checkOut: '',
-    guests: '1',
-    notes: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+function digitsOnly(val: string) {
+  return val.replace(/\D/g, '');
+}
 
-  function handleChange(field: string, value: string) {
+function toIso(dateInput: string) {
+  // date inputs return yyyy-mm-dd; convert to Date for comparison
+  return new Date(dateInput + 'T00:00:00');
+}
+
+function validate(form: FormState, email: string): FormErrors {
+  const errors: FormErrors = {};
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (form.name.trim().length < 2) errors.name = 'Name must be at least 2 characters.';
+  if (digitsOnly(form.phoneNumber).length < 10) errors.phoneNumber = 'Phone must have at least 10 digits.';
+  if (form.bnbName.trim().length < 2) errors.bnbName = 'BNB name must be at least 2 characters.';
+
+  if (!form.checkInDate) {
+    errors.checkInDate = 'Check-in date is required.';
+  } else if (toIso(form.checkInDate) < today) {
+    errors.checkInDate = 'Check-in date cannot be in the past.';
+  }
+
+  if (!form.checkOutDate) {
+    errors.checkOutDate = 'Check-out date is required.';
+  } else if (form.checkInDate && toIso(form.checkOutDate) <= toIso(form.checkInDate)) {
+    errors.checkOutDate = 'Check-out must be after check-in.';
+  }
+
+  if (form.comments.length > 500) errors.comments = 'Comments cannot exceed 500 characters.';
+
+  return errors;
+}
+
+export default function BookingForm({ email, domain, onSuccess, onClose }: Props) {
+  const [form, setForm] = useState<FormState>({
+    name: '',
+    phoneNumber: '',
+    bnbName: '',
+    checkInDate: '',
+    checkOutDate: '',
+    vehicle: '',
+    priceExpectation: '',
+    comments: '',
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [loading, setLoading] = useState(false);
+  const [serverError, setServerError] = useState('');
+
+  function set(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    // Clear field error on change
+    if (errors[field as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
-    setLoading(true);
+    setServerError('');
 
+    const fieldErrors = validate(form, email);
+    if (Object.keys(fieldErrors).length > 0) {
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch('/api/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          domain,
-          bookingData: { ...form },
-        }),
+        body: JSON.stringify({ email, domain, ...form }),
       });
       const data = await res.json();
-
       if (!res.ok || !data.success) {
-        setError(data.message ?? 'Submission failed');
+        setServerError(data.message ?? 'Submission failed. Please try again.');
       } else {
         onSuccess();
       }
     } catch {
-      setError('Network error. Please try again.');
+      setServerError('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
   }
 
+  const submitClass = SUBMIT_BTN[domain] ?? SUBMIT_BTN['discountbnbclub.com'];
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-40 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-8 relative max-h-[90vh] overflow-y-auto">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"
-        >
-          ✕
-        </button>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative max-h-[90vh] flex flex-col">
+        {/* Fixed header */}
+        <div className="px-8 pt-8 pb-4 border-b border-gray-100">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl"
+          >
+            ✕
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900">Book Now</h2>
+          <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+            Fill out this form and we will contact and request your place in the BnB.
+            Please pay the BnB directly — they will message you back.
+          </p>
+        </div>
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Book Now</h2>
-        <p className="text-gray-500 text-sm mb-6">
-          Fill in your details and we&apos;ll get back to you to confirm your booking.
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Scrollable form body */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto px-8 py-6 space-y-5">
           {/* Email (read-only) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <Field label="Email">
             <input
               type="email"
               value={email}
               readOnly
-              className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
+              className="input bg-gray-50 text-gray-500 cursor-not-allowed"
             />
-          </div>
+          </Field>
 
           {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+          <Field label="Full Name *" error={errors.name}>
             <input
               type="text"
               value={form.name}
-              onChange={(e) => handleChange('name', e.target.value)}
+              onChange={(e) => set('name', e.target.value)}
               placeholder="Jane Smith"
-              required
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`input ${errors.name ? 'border-red-400' : ''}`}
             />
-          </div>
+          </Field>
 
           {/* Phone */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone (optional)</label>
+          <Field label="Phone Number *" error={errors.phoneNumber}>
             <input
               type="tel"
-              value={form.phone}
-              onChange={(e) => handleChange('phone', e.target.value)}
+              value={form.phoneNumber}
+              onChange={(e) => set('phoneNumber', e.target.value)}
               placeholder="+1 (555) 000-0000"
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`input ${errors.phoneNumber ? 'border-red-400' : ''}`}
             />
-          </div>
+          </Field>
+
+          {/* BNB Name */}
+          <Field label="BNB Name *" error={errors.bnbName}>
+            <input
+              type="text"
+              value={form.bnbName}
+              onChange={(e) => set('bnbName', e.target.value)}
+              placeholder="Beachfront Villa"
+              className={`input ${errors.bnbName ? 'border-red-400' : ''}`}
+            />
+          </Field>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
+            <Field label="Check-in *" error={errors.checkInDate}>
               <input
                 type="date"
-                value={form.checkIn}
-                onChange={(e) => handleChange('checkIn', e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={form.checkInDate}
+                onChange={(e) => set('checkInDate', e.target.value)}
+                className={`input ${errors.checkInDate ? 'border-red-400' : ''}`}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
+            </Field>
+            <Field label="Check-out *" error={errors.checkOutDate}>
               <input
                 type="date"
-                value={form.checkOut}
-                onChange={(e) => handleChange('checkOut', e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={form.checkOutDate}
+                onChange={(e) => set('checkOutDate', e.target.value)}
+                className={`input ${errors.checkOutDate ? 'border-red-400' : ''}`}
               />
-            </div>
+            </Field>
           </div>
 
-          {/* Guests */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Number of Guests</label>
-            <select
-              value={form.guests}
-              onChange={(e) => handleChange('guests', e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                <option key={n} value={n}>{n} guest{n > 1 ? 's' : ''}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Additional Notes (optional)
-            </label>
-            <textarea
-              value={form.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Any special requests or questions…"
-              rows={3}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          {/* Vehicle (optional) */}
+          <Field label="Vehicle (optional)">
+            <input
+              type="text"
+              value={form.vehicle}
+              onChange={(e) => set('vehicle', e.target.value)}
+              placeholder="Blue Honda Civic"
+              className="input"
             />
-          </div>
+          </Field>
 
-          {error && (
+          {/* Price Expectation (optional) */}
+          <Field label="Price Expectation (optional)">
+            <input
+              type="text"
+              value={form.priceExpectation}
+              onChange={(e) => set('priceExpectation', e.target.value)}
+              placeholder="$100/night"
+              className="input"
+            />
+          </Field>
+
+          {/* Comments (optional, 500 char limit) */}
+          <Field label="Comments (optional)" error={errors.comments}>
+            <div className="relative">
+              <textarea
+                value={form.comments}
+                onChange={(e) => set('comments', e.target.value)}
+                placeholder="Any special requests or questions…"
+                rows={3}
+                maxLength={500}
+                className={`input resize-none pb-6 ${errors.comments ? 'border-red-400' : ''}`}
+              />
+              <span className={`absolute bottom-2 right-3 text-xs ${
+                form.comments.length > 450 ? 'text-orange-500' : 'text-gray-400'
+              }`}>
+                {form.comments.length}/500
+              </span>
+            </div>
+          </Field>
+
+          {serverError && (
             <p className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
+              {serverError}
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full ${SUBMIT_BTN[domain] ?? SUBMIT_BTN['discountbnbclub.com']}
-              text-white font-semibold py-3 rounded-lg transition-colors text-sm`}
-          >
-            {loading ? 'Submitting…' : 'Submit Booking'}
-          </button>
+          {/* Actions */}
+          <div className="flex gap-3 pt-1 pb-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border border-gray-300 text-gray-700 font-semibold py-3
+                rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className={`flex-1 ${submitClass} text-white font-semibold py-3
+                rounded-lg transition-colors text-sm`}
+            >
+              {loading ? 'Submitting…' : 'Submit Booking'}
+            </button>
+          </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// Small helper to reduce repetition
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      {children}
+      {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
     </div>
   );
 }
