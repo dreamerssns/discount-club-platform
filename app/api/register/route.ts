@@ -45,7 +45,13 @@ export async function POST(req: NextRequest) {
     Promise.allSettled([
       sendVerificationCode(email, code, domain),
       sendRegistrationNotification(email, domain, code, timestamp),
-    ]).catch(console.error);
+    ]).then(results => {
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.error(`[/api/register] email[${i}] failed:`, r.reason);
+        }
+      });
+    });
 
     return NextResponse.json(
       { success: true, message: 'Verification code sent to your email' },
