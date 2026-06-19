@@ -19,7 +19,8 @@ export interface IBooking extends Document {
   checkInDate: string;   // mm/dd/yyyy
   checkOutDate: string;  // mm/dd/yyyy
   vehicle?: string;
-  priceExpectation?: string;
+  priceExpectation: string;
+  priceType: 'nightly' | 'total';
   comments?: string;
   // Admin fields
   status: BookingStatus;
@@ -48,7 +49,8 @@ const BookingSchema = new Schema<IBooking>(
     checkInDate:      { type: String, required: true },
     checkOutDate:     { type: String, required: true },
     vehicle:          { type: String, default: '' },
-    priceExpectation: { type: String, default: '' },
+    priceExpectation: { type: String, required: true },
+    priceType:        { type: String, enum: ['nightly', 'total'], required: true },
     comments:         { type: String, default: '' },
     status:           {
       type: String,

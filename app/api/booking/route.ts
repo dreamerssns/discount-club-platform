@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     const checkOutDate = (body?.checkOutDate ?? '').trim();
     const vehicle          = (body?.vehicle ?? '').trim();
     const priceExpectation = (body?.priceExpectation ?? '').trim();
+    const priceType        = (body?.priceType ?? '').trim();
     const comments         = (body?.comments ?? '').trim();
 
     // Basic field validation
@@ -39,6 +40,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Phone must have at least 10 digits' }, { status: 400 });
     if (bnbName.length < 2)
       return NextResponse.json({ success: false, message: 'BNB name must be at least 2 characters' }, { status: 400 });
+    if (!priceExpectation)
+      return NextResponse.json({ success: false, message: 'Price expectation is required' }, { status: 400 });
+    if (!['nightly', 'total'].includes(priceType))
+      return NextResponse.json({ success: false, message: 'Invalid price type' }, { status: 400 });
     if (comments.length > 500)
       return NextResponse.json({ success: false, message: 'Comments cannot exceed 500 characters' }, { status: 400 });
 
@@ -77,7 +82,7 @@ export async function POST(req: NextRequest) {
       email, domain, name, phoneNumber, bnbName,
       checkInDate:  fmt(checkIn),
       checkOutDate: fmt(checkOut),
-      vehicle, priceExpectation, comments,
+      vehicle, priceExpectation, priceType, comments,
       status: 'pending',
       notes: '',
       statusHistory: [],
@@ -87,7 +92,7 @@ export async function POST(req: NextRequest) {
       await sendBookingNotification({
         email, domain, name, phoneNumber, bnbName,
         checkInDate: fmt(checkIn), checkOutDate: fmt(checkOut),
-        vehicle, priceExpectation, comments,
+        vehicle, priceExpectation, priceType, comments,
         timestamp,
         bookingId: String(booking._id),
       });

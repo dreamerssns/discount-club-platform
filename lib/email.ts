@@ -107,7 +107,8 @@ interface BookingNotificationData {
   checkInDate: string;
   checkOutDate: string;
   vehicle?: string;
-  priceExpectation?: string;
+  priceExpectation: string;
+  priceType: string;
   comments?: string;
   timestamp: string;
   bookingId: string;
@@ -116,9 +117,11 @@ interface BookingNotificationData {
 export async function sendBookingNotification(data: BookingNotificationData) {
   const {
     email, domain, name, phoneNumber, bnbName,
-    checkInDate, checkOutDate, vehicle, priceExpectation, comments,
+    checkInDate, checkOutDate, vehicle, priceExpectation, priceType, comments,
     timestamp, bookingId,
   } = data;
+
+  const priceLabel = `${priceExpectation} ${priceType === 'nightly' ? '/ night' : '(total stay)'}`;
 
   const domainLabel = getDomainLabel(domain);
   const optional = (label: string, val?: string) =>
@@ -139,7 +142,7 @@ export async function sendBookingNotification(data: BookingNotificationData) {
       `- Check-in:   ${checkInDate}`,
       `- Check-out:  ${checkOutDate}`,
       optional('Vehicle', vehicle),
-      optional('Price Expectation', priceExpectation),
+      `- Price Expectation: ${priceLabel}`,
       optional('Comments', comments),
       ``,
       `Reference ID: ${bookingId}`,
@@ -157,7 +160,7 @@ export async function sendBookingNotification(data: BookingNotificationData) {
           ${row('Check-in', checkInDate)}
           ${row('Check-out', checkOutDate)}
           ${row('Vehicle', vehicle || '—')}
-          ${row('Price Expectation', priceExpectation || '—')}
+          ${row('Price Expectation', priceLabel)}
           ${row('Comments', comments || '—')}
         </table>
         <p style="color:#9ca3af;font-size:12px;margin-top:24px;">Reference ID: ${bookingId}</p>
@@ -187,7 +190,7 @@ export async function sendBookingNotification(data: BookingNotificationData) {
       `- Check-in:   ${checkInDate}`,
       `- Check-out:  ${checkOutDate}`,
       optional('Vehicle', vehicle),
-      optional('Price Expectation', priceExpectation),
+      `- Price Expectation: ${priceLabel}`,
       optional('Comments', comments),
       ``,
       `Submitted: ${timestamp}`,
@@ -215,7 +218,7 @@ export async function sendBookingNotification(data: BookingNotificationData) {
           ${row('Check-in', checkInDate)}
           ${row('Check-out', checkOutDate)}
           ${row('Vehicle', vehicle || '—')}
-          ${row('Price Expectation', priceExpectation || '—')}
+          ${row('Price Expectation', priceLabel)}
           ${row('Comments', comments || '—')}
           ${row('Status', '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-size:12px;">Pending</span>')}
         </table>

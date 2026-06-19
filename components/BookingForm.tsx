@@ -17,6 +17,7 @@ interface FormState {
   checkOutDate: string;
   vehicle: string;
   priceExpectation: string;
+  priceType: 'nightly' | 'total';
   comments: string;
 }
 
@@ -26,6 +27,7 @@ interface FormErrors {
   bnbName?: string;
   checkInDate?: string;
   checkOutDate?: string;
+  priceExpectation?: string;
   comments?: string;
 }
 
@@ -51,6 +53,7 @@ function validate(form: FormState, email: string): FormErrors {
   if (form.name.trim().length < 2) errors.name = 'Name must be at least 2 characters.';
   if (digitsOnly(form.phoneNumber).length < 10) errors.phoneNumber = 'Phone must have at least 10 digits.';
   if (form.bnbName.trim().length < 2) errors.bnbName = 'BNB name must be at least 2 characters.';
+  if (!form.priceExpectation.trim()) errors.priceExpectation = 'Price expectation is required.';
 
   if (!form.checkInDate) {
     errors.checkInDate = 'Check-in date is required.';
@@ -78,6 +81,7 @@ export default function BookingForm({ email, domain, onSuccess, onClose }: Props
     checkOutDate: '',
     vehicle: '',
     priceExpectation: '',
+    priceType: 'nightly',
     comments: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -218,15 +222,41 @@ export default function BookingForm({ email, domain, onSuccess, onClose }: Props
             />
           </Field>
 
-          {/* Price Expectation (optional) */}
-          <Field label="Price Expectation (optional)">
-            <input
-              type="text"
-              value={form.priceExpectation}
-              onChange={(e) => set('priceExpectation', e.target.value)}
-              placeholder="$100/night"
-              className="input"
-            />
+          {/* Price Expectation (required) */}
+          <Field label="Price Expectation *" error={errors.priceExpectation}>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.priceExpectation}
+                onChange={(e) => set('priceExpectation', e.target.value)}
+                placeholder="$100"
+                className={`input flex-1 ${errors.priceExpectation ? 'border-red-400' : ''}`}
+              />
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm font-medium shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setForm(p => ({ ...p, priceType: 'nightly' }))}
+                  className={`px-3 py-2 transition-colors ${
+                    form.priceType === 'nightly'
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  /night
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(p => ({ ...p, priceType: 'total' }))}
+                  className={`px-3 py-2 border-l border-gray-300 transition-colors ${
+                    form.priceType === 'total'
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  total
+                </button>
+              </div>
+            </div>
           </Field>
 
           {/* Comments (optional, 500 char limit) */}
