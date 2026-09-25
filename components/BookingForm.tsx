@@ -47,8 +47,6 @@ function toIso(dateInput: string) {
 
 function validate(form: FormState, email: string): FormErrors {
   const errors: FormErrors = {};
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   if (form.name.trim().length < 2) errors.name = 'Name must be at least 2 characters.';
   if (digitsOnly(form.phoneNumber).length < 10) errors.phoneNumber = 'Phone must have at least 10 digits.';
@@ -57,8 +55,6 @@ function validate(form: FormState, email: string): FormErrors {
 
   if (!form.checkInDate) {
     errors.checkInDate = 'Check-in date is required.';
-  } else if (toIso(form.checkInDate) < today) {
-    errors.checkInDate = 'Check-in date cannot be in the past.';
   }
 
   if (!form.checkOutDate) {

@@ -47,14 +47,11 @@ export async function POST(req: NextRequest) {
     if (comments.length > 500)
       return NextResponse.json({ success: false, message: 'Comments cannot exceed 500 characters' }, { status: 400 });
 
-    const today = new Date(); today.setHours(0, 0, 0, 0);
     const checkIn  = parseDate(checkInDate);
     const checkOut = parseDate(checkOutDate);
 
     if (!checkIn)
       return NextResponse.json({ success: false, message: 'Invalid check-in date' }, { status: 400 });
-    if (checkIn < today)
-      return NextResponse.json({ success: false, message: 'Check-in date cannot be in the past' }, { status: 400 });
     if (!checkOut)
       return NextResponse.json({ success: false, message: 'Invalid check-out date' }, { status: 400 });
     if (checkOut <= checkIn)
