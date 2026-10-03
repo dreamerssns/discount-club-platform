@@ -28,6 +28,15 @@ export interface IBooking extends Document {
   statusHistory: IStatusHistory[];
   createdAt: Date;
   updatedAt: Date;
+  // Confirmation snapshot — filled in by admin when approving, used to send
+  // the full booking confirmation email to the guest and the BNB owner
+  confirmedBnbId?: string;
+  confirmedPropertyAddress?: string;
+  confirmedOperatorName?: string;
+  confirmedPrice?: string;
+  confirmedCheckInTime?: string;
+  confirmedCheckOutTime?: string;
+  confirmationSentAt?: Date;
 }
 
 const StatusHistorySchema = new Schema<IStatusHistory>(
@@ -59,6 +68,13 @@ const BookingSchema = new Schema<IBooking>(
     },
     notes:         { type: String, default: '' },
     statusHistory: { type: [StatusHistorySchema], default: [] },
+    confirmedBnbId:            { type: String },
+    confirmedPropertyAddress:  { type: String },
+    confirmedOperatorName:     { type: String },
+    confirmedPrice:            { type: String },
+    confirmedCheckInTime:      { type: String },
+    confirmedCheckOutTime:     { type: String },
+    confirmationSentAt:        { type: Date },
   },
   { timestamps: true }
 );
