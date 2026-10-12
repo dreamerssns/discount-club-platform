@@ -119,10 +119,15 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-gray-200 py-6 text-center text-sm text-gray-400">
-        {domain} &copy; {new Date().getFullYear()}
-        <span className="mx-2">·</span>
-        <a href="/register-bnb" className="underline hover:text-gray-600">List Your BNB</a>
+      <footer className="mt-auto border-t border-gray-200 py-6 flex flex-col items-center gap-3 text-center text-sm text-gray-400">
+        <a
+          href="/register-bnb"
+          className="bg-orange-500 text-white font-bold px-5 py-2.5 rounded-lg shadow
+            hover:bg-orange-600 active:scale-95 transition-all"
+        >
+          List Your BNB
+        </a>
+        <div>{domain} &copy; {new Date().getFullYear()}</div>
       </footer>
 
       {/* Modals */}
