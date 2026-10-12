@@ -58,7 +58,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="bg-white text-gray-900 font-bold px-8 py-4 rounded-xl shadow-lg
                   hover:bg-gray-100 active:scale-95 transition-all text-base"
               >
-                Register to Get Access
+                Book a BNB
               </button>
             ) : (
               <>
